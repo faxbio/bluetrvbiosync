@@ -1,45 +1,71 @@
-- id: '1653939879985'
-  alias: BIO - Calibrate TRV Thermostat Automation ADJ
-  description: Test Automazione per calibrare TRV con Temp esterna - con condizioni
-    - basato su ADJ
-  trigger:
-  - platform: time_pattern
-    minutes: /5
-  condition:
-  - condition: and
-    conditions:
-    - condition: template
-      value_template: '{{ states(external_temperature) != "unavailable"}}'
-    - condition: template
-      value_template: '{{ states(external_temperature) != "unknown"}}'
-    - condition: template
-      value_template: '{{ (trv_new_calibration |float | round(1) != trv_actual_calibration
-        |float | round(1)) }}'
-    - condition: template
-      value_template: '{{ (trv_adj_calibration |float | round(1))|abs >= (0.5) }}'
-  action:
-  - service: mqtt.publish
-    data_template:
-      topic: zigbee2mqtt/{{ target_device }}/set/local_temperature_calibration
-      payload_template: '{{ (trv_actual_calibration|float + trv_adj_calibration|float)|round(1) }}'
-  - service: persistent_notification.create
-    data:
-      message: 'New Calibration: {{ trv_new_calibration }} - Final Calibration: {{((state_attr(climate_device,"local_temperature_calibration")|float))}}
-        - TRV Measure: {{ trv_relevated }} - External Temp: {{ states(external_temperature) }} - ADJ Cal : {{(trv_actual_calibration|float + trv_adj_calibration|float)|round(1)}}'
-      title: BIO - Calibrate TRV Thermostat Automation ADJ
-  - delay:
-      hours: 0
-      minutes: '{{refreshtime}}'
-      seconds: 0
-      milliseconds: 0
-  mode: single
-  variables:
-    target_device: '0x8cf681fffeb0ef2a'
-    climate_device: climate.trv_genitori
-    external_temperature: sensor.temperature_camera
-    trv_actual_calibration: '{{state_attr(climate_device,"local_temperature_calibration")|float|round(1)}}'
-    trv_relevated: '{{ ((state_attr(climate_device,"current_temperature")|float)-(state_attr(climate_device,"current_temperature_calibration")|float))}}'
-    trv_new_calibration: '{{ ((states(external_temperature)|float) - ((trv_relevated)|float))|round(1)
+blueprint:
+  name: Sync TRV Bio
+  description: Sync external temperature sensor with TRV temperature
+  domain: automation
+  input:
+    ieeeaddressoftrv:
+      name: IEEE Address
+      description:
+        This is the address of the TRV found in your zigbee database example
+        0x459877fffe1f2e83
+    external_temp:
+      name: Select the external temp sensor
+      description: This will be your external temp sensor
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+          multiple: false
+    climate_name:
+      name: Climate entry
+      description: This will be the TRV it self in home assistant
+      selector:
+        entity:
+          domain: climate
+          multiple: false
+    intervaltiming:
+      name: Frequency Time
+      description: This will set the sleep time after applyed value
+  source_url: https://github.com/faxbio/trvsyncbio/blob/main/synctrvbio
+alias: BIO - Calibrate TRV Thermostat Automation ADJ
+trigger:
+- platform: time_pattern
+  minutes: /5
+condition:
+- condition: and
+  conditions:
+  - condition: template
+    value_template: '{{ states(external_temperature) != "unavailable"}}'
+  - condition: template
+    value_template: '{{ states(external_temperature) != "unknown"}}'
+  # - condition: template
+  #   value_template: '{{ (trv_new_calibration |float | round(1) != trv_actual_calibration
+  #     |float | round(1)) }}'
+  - condition: template
+    value_template: '{{ (trv_adj_calibration |float | round(1))|abs >= (0.5) }}'
+action:
+- service: persistent_notification.create
+  data:
+    message: 'Climate: {{ climate_device }} - Actual Calibration: {{((state_attr(climate_device,"local_temperature_calibration")|float))}}
+      - TRV Measure: {{ trv_relevated }} - External Temp: {{ states(external_temperature) }} - ADJ Calibration Applied : {{(trv_actual_calibration|float + trv_adj_calibration|float)|round(1)}}'
+    title: BIO - Calibrate TRV Thermostat Automation ADJ - BLUEPRINT
+- service: mqtt.publish
+  data_template:
+    topic: zigbee2mqtt/{{ target_device }}/set/local_temperature_calibration
+    payload_template: '{{ (trv_actual_calibration|float + trv_adj_calibration|float)|round(1) }}'
+- delay:
+    hours: 0
+    minutes: '{{refreshtime}}'
+    seconds: 0
+    milliseconds: 0
+mode: single
+variables:
+  target_device: !input ieeeaddressoftrv #'0x8cf681fffeb0ef2a'
+  climate_device: !input climate_name #climate.trv_genitori
+  external_temperature: !input external_temp #sensor.temperature_camera
+  trv_actual_calibration: '{{state_attr(climate_device,"local_temperature_calibration")|float|round(1)}}'
+  trv_relevated: '{{ ((state_attr(climate_device,"current_temperature")|float)-(state_attr(climate_device,"current_temperature_calibration")|float))}}'
+  trv_new_calibration: '{{ ((states(external_temperature)|float) - ((trv_relevated)|float))|round(1)
       }}'
-    trv_adj_calibration: '{{ (((states(external_temperature)|float) - (state_attr(climate_device,"current_temperature")|float))|round(1)) }}'
-    refreshtime: 5
+  trv_adj_calibration: '{{ (((states(external_temperature)|float) - (state_attr(climate_device,"current_temperature")|float))|round(1)) }}'
+  refreshtime: !input intervaltiming
