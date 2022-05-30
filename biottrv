@@ -26,7 +26,7 @@ blueprint:
     intervaltiming:
       name: Frequency Time
       description: This will set the sleep time after applyed value
-  source_url: https://github.com/faxbio/trvsyncbio/blob/main/synctrvbio
+  source_url: https://github.com/faxbio/bluetrvbiosync/blob/main/biottrv
 alias: BIO - Calibrate TRV Thermostat Automation ADJ
 trigger:
 - platform: time_pattern
