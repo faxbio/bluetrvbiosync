@@ -1,0 +1,45 @@
+- id: '1653939879985'
+  alias: BIO - Calibrate TRV Thermostat Automation ADJ
+  description: Test Automazione per calibrare TRV con Temp esterna - con condizioni
+    - basato su ADJ
+  trigger:
+  - platform: time_pattern
+    minutes: /5
+  condition:
+  - condition: and
+    conditions:
+    - condition: template
+      value_template: '{{ states(external_temperature) != "unavailable"}}'
+    - condition: template
+      value_template: '{{ states(external_temperature) != "unknown"}}'
+    - condition: template
+      value_template: '{{ (trv_new_calibration |float | round(1) != trv_actual_calibration
+        |float | round(1)) }}'
+    - condition: template
+      value_template: '{{ (trv_adj_calibration |float | round(1))|abs >= (0.5) }}'
+  action:
+  - service: mqtt.publish
+    data_template:
+      topic: zigbee2mqtt/{{ target_device }}/set/local_temperature_calibration
+      payload_template: '{{ (trv_actual_calibration|float + trv_adj_calibration|float)|round(1) }}'
+  - service: persistent_notification.create
+    data:
+      message: 'New Calibration: {{ trv_new_calibration }} - Final Calibration: {{((state_attr(climate_device,"local_temperature_calibration")|float))}}
+        - TRV Measure: {{ trv_relevated }} - External Temp: {{ states(external_temperature) }} - ADJ Cal : {{(trv_actual_calibration|float + trv_adj_calibration|float)|round(1)}}'
+      title: BIO - Calibrate TRV Thermostat Automation ADJ
+  - delay:
+      hours: 0
+      minutes: '{{refreshtime}}'
+      seconds: 0
+      milliseconds: 0
+  mode: single
+  variables:
+    target_device: '0x8cf681fffeb0ef2a'
+    climate_device: climate.trv_genitori
+    external_temperature: sensor.temperature_camera
+    trv_actual_calibration: '{{state_attr(climate_device,"local_temperature_calibration")|float|round(1)}}'
+    trv_relevated: '{{ ((state_attr(climate_device,"current_temperature")|float)-(state_attr(climate_device,"current_temperature_calibration")|float))}}'
+    trv_new_calibration: '{{ ((states(external_temperature)|float) - ((trv_relevated)|float))|round(1)
+      }}'
+    trv_adj_calibration: '{{ (((states(external_temperature)|float) - (state_attr(climate_device,"current_temperature")|float))|round(1)) }}'
+    refreshtime: 5
