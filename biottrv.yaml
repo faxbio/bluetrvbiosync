@@ -26,7 +26,7 @@ blueprint:
     intervaltiming:
       name: Frequency Time
       description: This will set the sleep time after applyed value
-  source_url: https://github.com/faxbio/bluetrvbiosync/blob/main/biottrv
+  #source_url: https://github.com/faxbio/bluetrvbiosync/blob/main/biottrv
 alias: BIO - Calibrate TRV Thermostat Automation ADJ
 trigger:
 - platform: time_pattern
@@ -39,20 +39,20 @@ condition:
   - condition: template
     value_template: '{{ states(external_temperature) != "unknown"}}'
   # - condition: template
-  #   value_template: '{{ (trv_new_calibration |float | round(1) != trv_actual_calibration
-  #     |float | round(1)) }}'
+  #   value_template: '{{ (trv_new_calibration |float(0) | round(1) != trv_actual_calibration
+  #     |float(0) | round(1)) }}'
   - condition: template
-    value_template: '{{ (trv_adj_calibration |float | round(1))|abs >= (0.5) }}'
+    value_template: '{{ (trv_adj_calibration |float(0) | round(1))|abs >= (0.5) }}'
 action:
 - service: persistent_notification.create
   data:
-    message: 'Climate: {{ climate_device }} - Actual Calibration: {{((state_attr(climate_device,"local_temperature_calibration")|float))}}
-      - TRV Measure: {{ trv_relevated }} - External Temp: {{ states(external_temperature) }} - ADJ Calibration Applied : {{(trv_actual_calibration|float + trv_adj_calibration|float)|round(1)}}'
+    message: 'Climate: {{ climate_device }} - Actual Calibration: {{((state_attr(climate_device,"local_temperature_calibration")|float(0)))}}
+      - TRV Measure: {{ trv_relevated }} - External Temp: {{ states(external_temperature) }} - FINAL Calibration Applied : {{(trv_actual_calibration|float(0) + trv_adj_calibration|float(0))|round(1)}}'
     title: BIO - Calibrate TRV Thermostat Automation ADJ - BLUEPRINT
 - service: mqtt.publish
   data_template:
     topic: zigbee2mqtt/{{ target_device }}/set/local_temperature_calibration
-    payload_template: '{{ (trv_actual_calibration|float + trv_adj_calibration|float)|round(1) }}'
+    payload_template: '{{ (trv_actual_calibration|float(0) + trv_adj_calibration|float(0))|round(1) }}'
 - delay:
     hours: 0
     minutes: '{{refreshtime}}'
@@ -63,9 +63,9 @@ variables:
   target_device: !input ieeeaddressoftrv #'0x8cf681fffeb0ef2a'
   climate_device: !input climate_name #climate.trv_genitori
   external_temperature: !input external_temp #sensor.temperature_camera
-  trv_actual_calibration: '{{state_attr(climate_device,"local_temperature_calibration")|float|round(1)}}'
-  trv_relevated: '{{ ((state_attr(climate_device,"current_temperature")|float)-(state_attr(climate_device,"current_temperature_calibration")|float))}}'
-  trv_new_calibration: '{{ ((states(external_temperature)|float) - ((trv_relevated)|float))|round(1)
+  trv_actual_calibration: '{{state_attr(climate_device,"local_temperature_calibration")|float(0)|round(1)}}'
+  trv_relevated: '{{ ((state_attr(climate_device,"current_temperature")|float(0))-(state_attr(climate_device,"current_temperature_calibration")|float(0)))}}'
+  trv_new_calibration: '{{ ((states(external_temperature)|float(0)) - ((trv_relevated)|float(0)))|round(1)
       }}'
-  trv_adj_calibration: '{{ (((states(external_temperature)|float) - (state_attr(climate_device,"current_temperature")|float))|round(1)) }}'
+  trv_adj_calibration: '{{ (((states(external_temperature)|float(0)) - (state_attr(climate_device,"current_temperature")|float(0)))|round(1)) }}'
   refreshtime: !input intervaltiming
