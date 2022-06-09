@@ -13,7 +13,7 @@ blueprint:
       selector:
         entity:
           domain: sensor
-          device_class: window
+          device_class: opening
           multiple: true
     summersensor:
       name: Select you summer sensor
