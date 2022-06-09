@@ -15,55 +15,55 @@ blueprint:
           domain: sensor
           device_class: window
           multiple: true
+    summersensor:
+      name: Select you summer sensor
+      description: This vill pervent the automation to run during summer
+      selector:
+        entity:
+          domain: input_boolean
+          multiple: false
     openingtiming:
-      name: Frequency Time
+      name: Opening Time
       description: This will set the sleep time in second before considering opened
     closingtiming:
-      name: Frequency Time
-      description: This will set the sleep time in second before considering closed
+      name: Closing Time
+      description: This will set the sleep time in seconds before considering closed
     maxtiming:
-      name: Frequency Time
-      description: This will set the max time before re enabling the normal valve operation
-  source_url: https://github.com/faxbio/bluetrvbiosync/blob/main/biottrv.yaml
+      name: Max Time
+      description: This will set the max time in minutes before re enabling the normal valve operation
+  source_url: https://github.com/faxbio/bluetrvbiosync/blob/main/biotrvwindow.yaml
 alias: BIO - Stop TRV on Windows opening
 trigger:
 - platform: state
-  entity_id: binary_sensor.door_window_salotto
+  entity_id: !input 'windowsensor'
   to: 'on'
   for:
     hours: 0
     minutes: 0
-    seconds: 30
+    seconds: !input 'openingtiming'
 condition:
 - condition: state
-  entity_id: input_boolean.estate
+  entity_id: !input 'summersensor'
   state: 'off'
 action:
-- service: scene.create
-  data:
-    scene_id: scntrvsalottofinestra
-    snapshot_entities:
-    - climate.trv_salotto
 - service: mqtt.publish
   data:
-    topic: zigbee2mqtt/0x8cf681fffeb0f188/set/force
+    topic: zigbee2mqtt/{{ target_device }}/set/force
     payload: close
 - wait_for_trigger:
   - platform: state
-    entity_id:
-    - binary_sensor.door_window_salotto
+    entity_id: !input 'windowsensor'
     to: 'off'
     for:
       hours: 0
       minutes: 0
-      seconds: 10
-  timeout: 00:10:00
+      seconds: !input 'closingtiming'
+  timeout: 00:{{ maxtime }}:00
 - service: mqtt.publish
   data:
-    topic: zigbee2mqtt/0x8cf681fffeb0f188/set/force
+    topic: zigbee2mqtt/{{ target_device }}/set/force
     payload: normal
-- service: scene.turn_on
-  data: {}
-  target:
-    entity_id: scene.scntrvsalottofinestra
-mode: restart
+variables:
+  target_device: !input 'ieeeaddressoftrv'
+  windowselected: !input 'windowsensor'
+  maxtime: !input 'maxtiming'
