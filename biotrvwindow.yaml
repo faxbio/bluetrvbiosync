@@ -12,8 +12,8 @@ blueprint:
       description: This will be your external window sensor
       selector:
         entity:
-          domain: sensor
-          device_class: opening
+          domain: binary_sensor
+          device_class: window
           multiple: true
     summersensor:
       name: Select you summer sensor
