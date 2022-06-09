@@ -46,6 +46,10 @@ condition:
   entity_id: !input 'summersensor'
   state: 'off'
 action:
+- service: persistent_notification.create
+  data:
+    message: 'Window Sensor: {{ windowselected }} Opening detected - Setting TRV on forced CLOSE'
+    title: BIO - Windows TRV Thermostat Automation BLUEPRINT
 - service: mqtt.publish
   data:
     topic: zigbee2mqtt/{{ target_device }}/set/force
@@ -63,6 +67,10 @@ action:
   data:
     topic: zigbee2mqtt/{{ target_device }}/set/force
     payload: normal
+- service: persistent_notification.create
+  data:
+    message: 'Window Sensor: {{ windowselected }} Closing detected - Setting TRV on NORMAL'
+    title: BIO - Windows TRV Thermostat Automation BLUEPRINT
 variables:
   target_device: !input 'ieeeaddressoftrv'
   windowselected: !input 'windowsensor'
