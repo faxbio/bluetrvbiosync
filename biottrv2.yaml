@@ -1,0 +1,88 @@
+blueprint:
+  name: Sync TRV Bio New
+  description: Sync external temperature sensor with TRV temperature - Verbose Control
+  domain: automation
+  input:
+    ieeeaddressoftrv:
+      name: IEEE Address
+      description: This is the address of the TRV found in your zigbee database example
+        0x459877fffe1f2e83
+    external_temp:
+      name: Select the external temp sensor
+      description: This will be your external temp sensor
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+          multiple: false
+    climate_name:
+      name: Climate entry
+      description: This will be the TRV it self in home assistant
+      selector:
+        entity:
+          domain: climate
+          multiple: false
+    intervaltiming:
+      name: Frequency Time
+      description: This will set the sleep time after applyed value
+    notificationnumber:
+      name: ID Notidifca
+      description: This set the notification ID to mantain specific persistant notification
+    verbosemode:
+      name: Verbose Toggle
+      description: This will be the input boolean for the messaging log mode
+      selector:
+        entity:
+          domain: input_boolean
+          multiple: false
+  source_url: https://github.com/faxbio/bluetrvbiosync/blob/main/biottrv2.yaml
+alias: BIO - Calibrate TRV Thermostat Automation ADJ - V2
+trigger:
+- platform: time_pattern
+  minutes: /5
+condition:
+- condition: and
+  conditions:
+  - condition: template
+    value_template: '{{ states(external_temperature) != "unavailable"}}'
+  - condition: template
+    value_template: '{{ states(external_temperature) != "unknown"}}'
+  - condition: template
+    value_template: '{{ (trv_adj_calibration |float(0) | round(1))|abs >= (0.5) }}'
+action:
+  - if:
+      - condition: state
+        entity_id: input_boolean.verbosemode
+        state: "on"
+    then:    
+      - service: persistent_notification.create
+        data:
+          notification_id: '{{noteid}}'
+          message: 'Climate: {{ climate_device }} - Actual Calibration: {{((state_attr(climate_device,"local_temperature_calibration")|float(0)))}}
+            - TRV Measure: {{ trv_relevated }} - External Temp: {{ states(external_temperature)
+            }} - FINAL Calibration Applied : {{(trv_actual_calibration|float(0) + trv_adj_calibration|float(0))|round(1)}}'
+          title: BIO - Calibrate TRV Thermostat Automation ADJ - BLUEPRINT
+  - service: mqtt.publish
+    data_template:
+      topic: zigbee2mqtt/{{ target_device }}/set/local_temperature_calibration
+      payload_template: '{{ (trv_actual_calibration|float(0) + trv_adj_calibration|float(0))|round(1)
+        }}'
+  - delay:
+      hours: 0
+      minutes: '{{refreshtime}}'
+      seconds: 0
+      milliseconds: 0
+mode: single
+variables:
+  target_device: !input 'ieeeaddressoftrv'
+  climate_device: !input 'climate_name'
+  external_temperature: !input 'external_temp'
+  trv_actual_calibration: '{{state_attr(climate_device,"local_temperature_calibration")|float(0)|round(1)}}'
+  trv_relevated: '{{ ((state_attr(climate_device,"current_temperature")|float(0))-(state_attr(climate_device,"current_temperature_calibration")|float(0)))}}'
+  trv_new_calibration: '{{ ((states(external_temperature)|float(0)) - ((trv_relevated)|float(0)))|round(1)
+    }}'
+  trv_adj_calibration: '{{ (((states(external_temperature)|float(0)) - (state_attr(climate_device,"current_temperature")|float(0)))|round(1))
+    }}'
+  refreshtime: !input 'intervaltiming'
+  noteid: !input 'notificationnumber'
+  messaging: !input 'verbosemode'
