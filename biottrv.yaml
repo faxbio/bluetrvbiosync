@@ -46,9 +46,9 @@ action:
 - service: persistent_notification.create
   data:
     notification_id: '{{noteid}}'
-    message: 'Climate: {{ climate_device }} - Actual Calibration: {{((state_attr(climate_device,"local_temperature_calibration")|float(0)))| round(1)}}
-      - TRV Measure: {{ trv_relevated }} - External Temp: {{ states(external_temperature)| round(1)
-      }} - FINAL Calibration Applied : {{(trv_actual_calibration|float(0) + trv_adj_calibration|float(0))| round(1)}}'
+    message: 'Climate: {{ climate_device }} @@@ Gateway Delta Calibration: {{ (trv_adj_calibration |float(0) - trv_actual_calibration |float(0))|abs }} @@@ Actual Calibration: {{((state_attr(climate_device,"local_temperature_calibration")|float(0)))| round(1)}}
+      @@@ TRV Measure: {{ trv_relevated }} @@@ External Temp: {{ states(external_temperature)| round(1)
+      }} @@@ FINAL Calibration Applied : {{(trv_actual_calibration|float(0) + trv_adj_calibration|float(0))| round(1)}}'
     title: BIO - Calibrate TRV Thermostat Automation ADJ - BLUEPRINT
 - service: mqtt.publish
   data_template:
