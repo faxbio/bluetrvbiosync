@@ -29,10 +29,10 @@ blueprint:
       name: ID Notidifca
       description: This set the notification ID to mantain specific persistant notification
   source_url: https://github.com/faxbio/bluetrvbiosync/blob/main/biottrv.yaml
-alias: BIO 1128 - Calibrate TRV Thermostat Automation ADJ
+alias: BIO 0105 - Calibrate TRV Thermostat Automation ADJ
 trigger:
 - platform: time_pattern
-  minutes: /5
+  minutes: /10
 condition:
 - condition: and
   conditions:
@@ -40,16 +40,26 @@ condition:
     value_template: '{{ states(external_temperature) != "unavailable"}}'
   - condition: template
     value_template: '{{ states(external_temperature) != "unknown"}}'
-  - condition: template
-    value_template: '{{ (trv_adj_calibration |float(0)|abs) >= (0.5) }}'
+  - condition: or
+    conditions:
+      - condition: template
+        value_template: '{{(state_attr(climate_device,"current_temperature")|float)-((states(external_temperature)|float))< (-0.5|float)}}'
+      - condition: template
+        value_template: '{{(state_attr(climate_device,"current_temperature")|float)-((states(external_temperature)|float))>= (0.5|float)}}'
 action:
 - service: persistent_notification.create
   data:
     notification_id: '{{noteid}}'
     message: 'Climate: {{ climate_device }} @@@ Gateway Delta Calibration: {{ (trv_adj_calibration |float(0)|abs) >= (0.5) }} @@@ Actual Calibration: {{((state_attr(climate_device,"local_temperature_calibration")|float(0)))| round(1)}}
       @@@ TRV Measure: {{ trv_relevated }} @@@ External Temp: {{ states(external_temperature)| round(1)
-      }} @@@ FINAL Calibration Applied : {{(trv_actual_calibration|float(0) + trv_adj_calibration|float(0))| round(1)}}'
-    title: BIO 1128 - Calibrate TRV Thermostat Automation ADJ - BLUEPRINT
+      }} @@@ FINAL Calibration Applied : {{(trv_actual_calibration|float(0) + trv_adj_calibration|float(0))| round(1)}}
+      @B@ current temp climate: {{(state_attr(climate_device,"current_temperature")|float)}}
+      @B@ current temp esterno: {{states(external_temperature)|float}}
+      @B@ current adj applicato: {{(state_attr(climate_device,"local_temperature_calibration")|float)}}
+      @B@ current temp rilevata: {{(state_attr(climate_device,"current_temperature")|float-(state_attr(climate_device,"local_temperature_calibration")|float))}}
+      @B@ adj da applicare: {{(state_attr(climate_device,"current_temperature")|float-(state_attr(climate_device,"local_temperature_calibration")|float))-(states(external_temperature)|float)}}
+      @B@ differenza attuale : {{(state_attr(climate_device,"current_temperature")|float)-((states(external_temperature)|float))}}'
+    title: BIO 0105 - Calibrate TRV Thermostat Automation ADJ - BLUEPRINT
 - service: mqtt.publish
   data_template:
     topic: zigbee2mqtt/{{ target_device }}/set/local_temperature_calibration
