@@ -65,7 +65,7 @@ action:
   - service: mqtt.publish
     data_template:
       topic: zigbee2mqtt/{{ target_device }}/set/local_temperature_calibration
-      payload_template: '{{ (trv_actual_calibration|float(0) + trv_adj_calibration|float(0))|round(1)
+      payload: '{{ (trv_actual_calibration|float(0) + trv_adj_calibration|float(0))|round(1)
         }}'
   - delay:
       hours: 0
